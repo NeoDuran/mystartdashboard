@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>나의 아침 대시보드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), 
+                        url('https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            min-height: 100vh;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: all 0.5s ease;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        .search-input {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+
+        .search-input:focus {
+            background: rgba(255, 255, 255, 0.95);
+            color: #1a1a1a;
+            outline: none;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+
+        .todo-item.completed {
+            text-decoration: line-through;
+            opacity: 0.5;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <!-- 상단 시계 및 날씨 섹션 -->
+    <header class="text-center mb-10 md:mb-16 fade-in">
+        <h1 id="clock" class="text-7xl md:text-9xl font-bold mb-4 tracking-tighter drop-shadow-2xl">00:00:00</h1>
+        <div class="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-6 text-xl md:text-2xl font-light">
+            <p id="date" class="opacity-90">날짜 정보 로딩 중...</p>
+            <span class="hidden md:inline opacity-30 text-3xl">|</span>
+            <div id="weather" class="flex items-center gap-3 bg-black/20 px-4 py-1 rounded-full border border-white/10">
+                <i id="weather-icon" data-lucide="refresh-cw" class="w-6 h-6 animate-spin"></i>
+                <span id="weather-info">날씨 확인 중...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- 중앙 검색 섹션 -->
+    <main class="w-full max-w-2xl mb-12 fade-in" style="animation-delay: 0.2s;">
+        <!-- target="_blank"를 추가하여 검색 시 대시보드를 유지하도록 수정 -->
+        <form id="search-form" action="https://www.google.com/search" method="GET" target="_blank" class="relative group">
+            <div class="absolute inset-y-0 left-5 flex items-center pointer-events-none text-white/70 group-focus-within:text-blue-600 transition-colors">
+                <i data-lucide="search" class="w-6 h-6"></i>
+            </div>
+            <input type="text" name="q" placeholder="Google 검색어 입력..." required
+                class="search-input w-full py-5 pl-14 pr-6 rounded-full text-lg transition-all duration-300 placeholder-white/60 shadow-xl">
+        </form>
+    </main>
+
+    <!-- 하단 할 일 목록 섹션 -->
+    <section class="w-full max-w-xl glass-panel p-6 md:p-8 fade-in" style="animation-delay: 0.4s;">
+        <div class="flex items-center justify-between mb-8">
+            <h2 class="text-2xl font-bold flex items-center gap-2">
+                <i data-lucide="list-todo" class="w-7 h-7 text-blue-300"></i>
+                오늘의 할 일
+            </h2>
+            <span id="todo-count" class="text-sm font-medium bg-blue-500/30 border border-blue-400/30 px-3 py-1 rounded-full">0개 남음</span>
+        </div>
+
+        <!-- 할 일 입력창 -->
+        <div class="flex gap-2 mb-8">
+            <input type="text" id="todo-input" placeholder="무엇을 해야 하나요?" 
+                class="flex-1 bg-white/10 border border-white/20 rounded-xl px-5 py-3 focus:outline-none focus:bg-white/20 focus:ring-2 focus:ring-white/30 transition-all text-white placeholder-white/40">
+            <button id="add-todo-btn" class="bg-blue-500/40 hover:bg-blue-500/60 border border-blue-400/30 px-6 py-3 rounded-xl font-bold transition-all active:scale-95 shadow-lg">
+                추가
+            </button>
+        </div>
+
+        <!-- 할 일 목록 -->
+        <ul id="todo-list" class="space-y-3 max-h-80 overflow-y-auto pr-2">
+            <!-- Items injected via JS -->
+        </ul>
+    </section>
+
+    <footer class="mt-auto pt-10 text-white/40 text-xs tracking-widest uppercase">
+        &copy; My Personal Dashboard &bull; Cheongju Weather Sync
+    </footer>
+
+    <script>
+        // 초기화
+        window.onload = function() {
+            lucide.createIcons();
+            updateClock();
+            fetchWeather();
+            renderTodos();
+            
+            // 시계 1초마다 업데이트
+            setInterval(updateClock, 1000);
+            // 날씨 20분마다 업데이트
+            setInterval(fetchWeather, 20 * 60 * 1000);
+        };
+
+        // 시계 및 날짜 업데이트
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            
+            const clockEl = document.getElementById('clock');
+            if (clockEl) clockEl.textContent = `${hours}:${minutes}:${seconds}`;
+
+            const dateOptions = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+            const dateEl = document.getElementById('date');
+            if (dateEl) dateEl.textContent = now.toLocaleDateString('ko-KR', dateOptions);
+        }
+
+        // 청주 날씨 정보 (Open-Meteo API)
+        async function fetchWeather() {
+            const infoEl = document.getElementById('weather-info');
+            const iconEl = document.getElementById('weather-icon');
+            
+            try {
+                // 청주 좌표: 위도 36.6372, 경도 127.4897
+                const response = await fetch('https://api.open-meteo.com/v1/forecast?latitude=36.6372&longitude=127.4897&current_weather=true&timezone=Asia%2FSeoul');
+                
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const data = await response.json();
+                
+                if (data.current_weather) {
+                    const temp = Math.round(data.current_weather.temperature);
+                    const code = data.current_weather.weathercode;
+                    const weatherDesc = interpretWeatherCode(code);
+                    
+                    infoEl.textContent = `청주 ${temp}°C, ${weatherDesc}`;
+                    updateWeatherIcon(code);
+                }
+            } catch (error) {
+                console.error('Weather Fetch Error:', error);
+                infoEl.textContent = '날씨 연결 실패';
+                iconEl.className = 'w-6 h-6 text-red-400';
+                iconEl.setAttribute('data-lucide', 'alert-circle');
+                lucide.createIcons();
+            }
+        }
+
+        function interpretWeatherCode(code) {
+            const codes = {
+                0: '맑음',
+                1: '대체로 맑음', 2: '구름 조금', 3: '흐림',
+                45: '안개', 48: '서리 안개',
+                51: '가벼운 이슬비', 53: '이슬비', 55: '강한 이슬비',
+                61: '약한 비', 63: '비', 65: '강한 비',
+                71: '약한 눈', 73: '눈', 75: '강한 눈',
+                80: '소나기', 81: '강한 소나기', 82: '폭우',
+                95: '뇌우'
+            };
+            return codes[code] || '흐림';
+        }
+
+        function updateWeatherIcon(code) {
+            const iconEl = document.getElementById('weather-icon');
+            iconEl.classList.remove('animate-spin');
+            
+            let iconName = 'cloud';
+            if (code === 0) iconName = 'sun';
+            else if (code <= 2) iconName = 'cloud-sun';
+            else if (code === 3) iconName = 'cloud';
+            else if (code >= 51 && code <= 67) iconName = 'cloud-rain';
+            else if (code >= 71 && code <= 77) iconName = 'snowflake';
+            else if (code >= 80 && code <= 82) iconName = 'cloud-lightning';
+            else if (code >= 95) iconName = 'zap';
+            
+            iconEl.setAttribute('data-lucide', iconName);
+            lucide.createIcons();
+        }
+
+        // 할 일 목록 (To-Do List)
+        const todoInput = document.getElementById('todo-input');
+        const addTodoBtn = document.getElementById('add-todo-btn');
+        const todoList = document.getElementById('todo-list');
+        const todoCount = document.getElementById('todo-count');
+
+        let todos = [
+            { text: '교실 환기 및 아침 맞이 준비', completed: false },
+            { text: '오늘의 수업 진도 확인', completed: true }
+        ];
+
+        function renderTodos() {
+            todoList.innerHTML = '';
+            todos.forEach((todo, index) => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between bg-white/10 border border-white/10 p-4 rounded-xl group transition-all hover:bg-white/15';
+                
+                li.innerHTML = `
+                    <div class="flex items-center gap-4 flex-1 cursor-pointer" onclick="toggleTodo(${index})">
+                        <div class="w-6 h-6 rounded-full border-2 border-white/30 flex items-center justify-center transition-all ${todo.completed ? 'bg-blue-500 border-blue-500' : ''}">
+                            ${todo.completed ? '<i data-lucide="check" class="w-4 h-4 text-white"></i>' : ''}
+                        </div>
+                        <span class="todo-item text-lg ${todo.completed ? 'completed' : ''}">${todo.text}</span>
+                    </div>
+                    <button onclick="deleteTodo(event, ${index})" class="text-white/20 hover:text-red-400 transition-colors p-1 opacity-0 group-hover:opacity-100">
+                        <i data-lucide="trash-2" class="w-5 h-5"></i>
+                    </button>
+                `;
+                todoList.appendChild(li);
+            });
+            
+            const activeTodos = todos.filter(t => !t.completed).length;
+            todoCount.textContent = `${activeTodos}개 남음`;
+            lucide.createIcons();
+        }
+
+        function addTodo() {
+            const text = todoInput.value.trim();
+            if (text) {
+                todos.unshift({ text, completed: false });
+                todoInput.value = '';
+                renderTodos();
+            }
+        }
+
+        window.toggleTodo = function(index) {
+            todos[index].completed = !todos[index].completed;
+            renderTodos();
+        };
+
+        window.deleteTodo = function(event, index) {
+            event.stopPropagation(); // li 클릭 이벤트 전파 방지
+            todos.splice(index, 1);
+            renderTodos();
+        };
+
+        addTodoBtn.addEventListener('click', addTodo);
+        todoInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addTodo();
+        });
+    </script>
+</body>
+</html>
